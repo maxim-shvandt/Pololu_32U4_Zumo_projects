@@ -31,7 +31,99 @@ shipType = "Place Patrol ship"
 #orientation of ship - "vertical" or "horizontal"
 shipOrient = "vertical"
 
+playerXHit = 0
+playerYHit = 0
+
 #ship types: 1) patrol ship - p , 2)Frigate - ff 3)kruiser - ccc 4) submarine - ssss 5) aircraft carrier - aaaaa
+
+########################################################################
+
+class CFields():
+
+    def __init__(self):
+    
+        self.playerPatrolBoatHit = 1
+        self.playerFrigatemyHit = 2
+        self.playerKruiserBoatHit = 3
+        self.playerSubmarineBoatHit = 4
+        self.playerAircraftCarrierBoatHit = 5
+        
+        self.enemyPatrolBoatHit = 1
+        self.enemyFrigatemyHit = 2
+        self.enemyKruiserBoatHit = 3
+        self.enemySubmarineBoatHit = 4
+        self.enemyAircraftCarrierBoatHit = 5
+    
+        self.w = 10
+        self.h = 10
+        self.myField = [[0 for x in range(self.w)] for y in range(self.h)]
+        self.enemyField = [[0 for x in range(self.w)] for y in range(self.h)]
+        
+        for x in range(self.w):
+            for y in range(self.h):
+                self.myField[ x ][ y ] = "."
+                
+        for x in range(self.w):
+            for y in range(self.h):
+                self.enemyField[ x ][ y ] = "."
+                
+        self.enemyField[ 2 ][ 2 ] = "s"
+                
+    #-------------------------------------------------------------------------------------------
+    
+    def placePlayerShipByCoords( self, xCoord, yCoord, type ):
+    
+        self.myField[ xCoord ][ yCoord ] = type
+        
+    #-------------------------------------------------------------------------------------------
+        
+    def playerCellHit( self, xCoord, yCoord ):  
+    
+        if self.enemyField[ xCoord ][ yCoord ] == "p":
+                self.enemyField[ xCoord ][ yCoord ] = "x"
+                self.enemyPatrolBoatHit -= 1
+        elif self.enemyField[ xCoord ][ yCoord ] == "f":
+                self.enemyField[ xCoord ][ yCoord ] = "x"
+                self.enemyFrigatemyHit -= 1
+        elif self.enemyField[ xCoord ][ yCoord ] == "k":
+                self.enemyField[ xCoord ][ yCoord ] = "x"
+                self.enemyKruiserBoatHit -= 1
+        elif self.enemyField[ xCoord ][ yCoord ] == "s":
+                self.enemyField[ xCoord ][ yCoord ] = "x"
+                self.enemySubmarineBoatHit -= 1
+        elif self.enemyField[ xCoord ][ yCoord ] == "a":
+                self.enemyField[ xCoord ][ yCoord ] = "x"
+                self.enemyAircraftCarrierBoatHit -= 1
+        elif self.enemyField[ xCoord ][ yCoord ] == ".":
+            self.enemyField[ xCoord ][ yCoord ] = "o"
+                
+    #-------------------------------------------------------------------------------------------
+        
+    def enemyCellHit( self, xCoord, yCoord ):
+    
+        # to be done
+    
+        self.myField[ xCoord ][ yCoord ] = type
+    
+    #-------------------------------------------------------------------------------------------
+    
+    def printField( self ):
+    
+        for x in range(self.w):
+            for y in range(self.h):
+                sys.stdout.write( self.myField[ x ][ y ] + '  ')
+            print("\n")
+        
+        print("===============================")
+            
+        for x in range(self.w):
+            for y in range(self.h):
+                sys.stdout.write( self.enemyField[ x ][ y ] + '  ')
+            print("\n")
+        
+########################################################################
+        
+gameField = CFields()
 
 ########################################################################
 
@@ -65,14 +157,20 @@ class EnemyGridPanel( wx.Panel ):
     
         """Constructor"""
         wx.Panel.__init__( self, parent )    
-        
+              
         fieldSize = 10
         global map
+        
+        global playerXHit
+        global playerYHit
+        
+        playerXHit = 0
+        playerYHit = 0
         
         self.margin = margin
         self.grid = gridlib.Grid( self, style = wx.BORDER_SUNKEN )
         self.grid.CreateGrid( fieldSize, fieldSize )
-        #self.grid.Bind( gridlib.EVT_GRID_SELECT_CELL, self.onSingleSelect )
+        self.grid.Bind( gridlib.EVT_GRID_SELECT_CELL, self.onSingleSelect )
         
         for row in range( 0, fieldSize ):
             for col in range( 0, fieldSize ):
@@ -92,6 +190,44 @@ class EnemyGridPanel( wx.Panel ):
         sizer = wx.BoxSizer( wx.VERTICAL )
         sizer.Add( self.grid, 1, wx.EXPAND )
         self.SetSizer( sizer )
+        
+    #-----------------------------------------------------------------------------------
+        
+    def onSingleSelect( self, event ):
+        """
+        Get the selection of a single cell by clicking or 
+        moving the selection with the arrow keys
+        """
+        
+        global gameField
+        global playerXHit
+        global playerYHit
+        
+        row = event.GetRow()
+        col = event.GetCol()
+        
+        playerXHit = row
+        playerYHit = col
+        
+        print ("playerHit %s : %s" % ( playerXHit, playerYHit ) )
+        gameField.playerCellHit( playerXHit, playerYHit )     
+
+        gameField.printField()
+
+        self.currentlySelectedCell = ( row, col )
+        
+    #------------------------------------------------------------------------------------
+        
+    def refreshGrid( self ):
+        
+        if self.margin == "enemy_field":
+        
+            if counter%2 == 0:
+                self.grid.SetCellBackgroundColour( 3, 3, wx.GREEN )
+            else:
+                self.grid.SetCellBackgroundColour( 3, 3, wx.RED )
+             
+        self.grid.ForceRefresh()
 
 ########################################################################
 
@@ -331,9 +467,15 @@ class RegularPanel( wx.Panel ):
             
     def refreshPanel( self, event ):
         
+        global gameField 
+        global playerXHit
+        global playerYHit
+        
         #self.panel1.ForceRefresh()
         self.panel2.refreshGrid()
         print( 'fired...' )
+        
+        gameField.printField()
         
     
 ########################################################################    
@@ -355,8 +497,8 @@ class MainPanel(wx.Panel):
         hSplitter = wx.SplitterWindow(page)
  
         self.panelOne = GridPanel(hSplitter, "my_field")     
-        #self.panelTwo = EnemyGridPanel(hSplitter, "enemy_field")            
-        self.panelTwo = GridPanel(hSplitter, "enemy_field")
+        self.panelTwo = EnemyGridPanel(hSplitter, "enemy_field")            
+        #self.panelTwo = GridPanel(hSplitter, "enemy_field")
         
         global counter
         
