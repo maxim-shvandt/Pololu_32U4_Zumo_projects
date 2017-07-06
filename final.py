@@ -25,6 +25,9 @@ shipOrient = "vertical"
 playerXHit = 0
 playerYHit = 0
 
+#flag that indicates the winner
+winner = None
+
 ########################################################################
 
 class CFields():
@@ -56,7 +59,9 @@ class CFields():
             for y in range(self.h):
                 self.enemyField[ x ][ y ] = "."
                 
-        self.enemyField = [ ["p",".",".",".","s","s","s","s",".","."],
+        self.placeComputerShips()
+                
+        self.enemyFieldTemp = [ ["p",".",".",".","s","s","s","s",".","."],
                          [".",".",".",".",".",".",".",".",".","."],
                          [".",".",".",".",".",".",".",".",".","."],
                          [".",".",".",".",".",".",".",".",".","."],
@@ -76,6 +81,8 @@ class CFields():
         
     def playerCellHit( self, xCoord, yCoord ):  
     
+        global winner
+    
         if self.enemyField[ xCoord ][ yCoord ] == "p":
                 self.enemyField[ xCoord ][ yCoord ] = "x"
                 self.enemyPatrolBoatHit -= 1
@@ -93,14 +100,134 @@ class CFields():
                 self.enemyAircraftCarrierBoatHit -= 1
         elif self.enemyField[ xCoord ][ yCoord ] == ".":
             self.enemyField[ xCoord ][ yCoord ] = "o"
+            
+        if ( self.enemyPatrolBoatHit + self.enemyFrigatemyHit + self.enemyKruiserBoatHit + self.enemySubmarineBoatHit + self.enemyAircraftCarrierBoatHit ) == 0:
+            
+            winner = "player"
                 
     #-------------------------------------------------------------------------------------------
         
-    def enemyCellHit( self, xCoord, yCoord ):
+    def enemyCellHit( self ):
     
-        # to be done
+        global winner
+        
+        shotMade = False
+        
+        while( shotMade == False ):
     
-        self.myField[ xCoord ][ yCoord ] = type
+            xCoord = random.randint(1,10)-1
+            yCoord = random.randint(1,10)-1
+    
+            if self.myField[ xCoord ][ yCoord ] != "x" and self.myField[ xCoord ][ yCoord ] != "o":
+    
+                if self.myField[ xCoord ][ yCoord ] == "p":
+                    self.myField[ xCoord ][ yCoord ] = "x"
+                    self.playerPatrolBoatHit -= 1
+                elif self.myField[ xCoord ][ yCoord ] == "f":
+                    self.myField[ xCoord ][ yCoord ] = "x"
+                    self.playerFrigatemyHit -= 1
+                elif self.myField[ xCoord ][ yCoord ] == "k":
+                    self.myField[ xCoord ][ yCoord ] = "x"
+                    self.playerKruiserBoatHit -= 1
+                elif self.myField[ xCoord ][ yCoord ] == "s":
+                    self.myField[ xCoord ][ yCoord ] = "x"
+                    self.playerSubmarineBoatHit -= 1
+                elif self.myField[ xCoord ][ yCoord ] == "a":
+                    self.myField[ xCoord ][ yCoord ] = "x"
+                    self.playerAircraftCarrierBoatHit -= 1
+                elif self.myField[ xCoord ][ yCoord ] == ".":
+                    self.myField[ xCoord ][ yCoord ] = "o"
+                    
+                print ("Computer shot at %s : %s" % ( xCoord, yCoord ) )
+                
+                print("******************************")
+                #for x in range(self.w):
+                    #for y in range(self.h):
+                        #sys.stdout.write( self.myField[ x ][ y ] + "  ")
+                    #print("\n")
+                print("******************************")
+                    
+                shotMade = True
+            
+        if ( self.playerPatrolBoatHit + self.playerFrigatemyHit + self.playerKruiserBoatHit + self.playerSubmarineBoatHit + self.playerAircraftCarrierBoatHit ) == 0:
+            
+            winner = "computer"
+    
+        #self.myField[ xCoord ][ yCoord ] = type
+    
+    #-------------------------------------------------------------------------------------------
+    
+    def placeComputerShips( self ):
+    
+        sym = None
+    
+        for shipLength in range( 1, 5 ):
+        
+            validPlace = False
+            x = 0
+            y = 0
+            ori = 0
+            
+            if shipLength == 1:
+                sym = "p"
+            elif shipLength == 2:
+                sym = "f"
+            elif shipLength == 3:
+                sym = "k"
+            elif shipLength == 4:
+                sym = "s"
+            elif shipLength == 5:
+                sym = "a"
+            
+            while( validPlace == False ):
+            
+                x = random.randint(1,10)-1
+                y = random.randint(1,10)-1
+                o = random.randint(0,1)
+                
+                if o == 0:
+                    ori = "v"
+                else:
+                    ori = "h"
+            
+                validPlace = self.validatePlace( x, y, shipLength, ori )# to be done
+                
+            if ori == "v":
+                for j in range( 0, shipLength ):
+                    self.enemyField[ x + j ][ y ] = sym
+            elif ori == "h":
+                for j in range( 0, shipLength ):
+                    self.enemyField[ x ][ y + j ] = sym
+        
+    #-------------------------------------------------------------------------------------------
+    
+    def validatePlace( self, x, y, shipLength, orient ):
+    
+        if orient == "v" and x + shipLength > 10:
+        
+	        return False
+            
+        elif orient == "h" and y + shipLength > 10:
+        
+            return False
+            
+        else:
+        
+            if orient == "v":
+            
+                for i in range( shipLength ):
+                
+                    if self.enemyField[ x + i ][ y ] != ".":
+                    
+                        return False
+                        
+            elif orient == "h":
+            
+                for i in range( shipLength ):
+                
+                    if self.enemyField[ x ][ y + i ] != ".":
+                    
+                        return False
     
     #-------------------------------------------------------------------------------------------
     
@@ -142,6 +269,10 @@ class CFields():
     
     #-------------------------------------------------------------------------------------------
     
+    def setSymbol( self, x, y, sym ):
+        self.myField[ x ][ y ] = sym
+        
+    
     def getMyField( self ):
     
         return self.myField
@@ -158,24 +289,30 @@ class CFields():
     
         for x in range(self.w):
             for y in range(self.h):
-                sys.stdout.write( self.myField[ x ][ y ] + '  ')
+                sys.stdout.write( self.myField[ x ][ y ] + "  ")
             print("\n")
     
     #-------------------------------------------------------------------------------------------
     
     def printField( self ):
     
+        print("====== STEP =============")
+        print("My field:")
+        
         for x in range(self.w):
             for y in range(self.h):
-                sys.stdout.write( self.myField[ x ][ y ] + '  ')
+                sys.stdout.write( self.myField[ x ][ y ] + "  " )
             print("\n")
         
         print("===============================")
+        print("My field:")
             
         for x in range(self.w):
             for y in range(self.h):
-                sys.stdout.write( self.enemyField[ x ][ y ] + '  ')
+                sys.stdout.write( self.enemyField[ x ][ y ] + "  ")
             print("\n")
+            
+        print("====== END ======================")
         
 ########################################################################
 
@@ -233,14 +370,19 @@ class EnemyGridPanel( wx.Panel ):
         playerYHit = col
         
         print ("playerHit %s : %s" % ( playerXHit, playerYHit ) )
-        gameField.playerCellHit( playerXHit, playerYHit )     
-        gameField.printField()
         
+        if gameState == "battle":
+        
+            gameField.playerCellHit( playerXHit, playerYHit )     
+            gameField.printField()
+
         self.currentlySelectedCell = ( row, col )
         
     #------------------------------------------------------------------------------------
         
     def refreshGrid( self ):
+              
+        global winner
               
         w, h = 10, 10;
         map = [[0 for x in range(w)] for y in range(h)]
@@ -249,10 +391,15 @@ class EnemyGridPanel( wx.Panel ):
 
         for x in range(w):
             for y in range(h):
-                if map[ x ][ y ] != "x":
+                if map[ x ][ y ] == "x":
                     self.grid.SetCellBackgroundColour( x, y, wx.RED )
-                elif map[ x ][ y ] != "o":
+                elif map[ x ][ y ] == "o":
                     self.grid.SetCellBackgroundColour( x, y, wx.CYAN )
+                    
+        if winner == "player":
+            for x in range(w):
+                for y in range(h):
+                    self.grid.SetCellBackgroundColour( x, y, wx.YELLOW )
               
         self.grid.ForceRefresh()
 
@@ -317,17 +464,34 @@ class MyGridPanel( wx.Panel ):
     def refreshGrid( self ):
         
         global gameField
+        global gameState
         
         w, h = 10, 10;
         map = [[0 for x in range(w)] for y in range(h)]
         
         map = gameField.getMyField()
 
-        for x in range(w):
-            for y in range(h):
-                if map[ x ][ y ] != ".":
-                    self.grid.SetCellBackgroundColour( x, y, wx.BLUE )
-                
+        if gameState == "ship_placement":
+        
+            for x in range(w):
+                for y in range(h):
+                    if map[ x ][ y ] != ".":
+                        self.grid.SetCellBackgroundColour( x, y, wx.BLUE )
+                    
+        if gameState == "battle":
+                    
+            for x in range(w):
+                for y in range(h):
+                    if map[ x ][ y ] == "x":
+                        self.grid.SetCellBackgroundColour( x, y, wx.RED )
+                    elif map[ x ][ y ] == "o":
+                        self.grid.SetCellBackgroundColour( x, y, wx.CYAN )
+                        
+            if winner == "computer":
+                for x in range(w):
+                    for y in range(h):
+                        self.grid.SetCellBackgroundColour( x, y, wx.YELLOW )
+                    
              
         self.grid.ForceRefresh()
         
@@ -466,9 +630,12 @@ class RegularPanel( wx.Panel ):
         global gameField 
         global playerXHit
         global playerYHit
-        
-        #self.panel1.refreshGrid()
+                
         self.panel2.refreshGrid()
+        
+        gameField.enemyCellHit()
+        self.panel1.refreshGrid()
+        
         print( 'fired...' )
         
         gameField.printField()
