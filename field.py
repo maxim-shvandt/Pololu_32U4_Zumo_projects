@@ -18,6 +18,7 @@ for x in range(w):
         sys.stdout.write(map [ x ][ y ] + '  ')
     print("\n")
 
+turn = "player"
     
 counter = 0
 
@@ -34,6 +35,66 @@ shipOrient = "vertical"
 
 ########################################################################
 
+class SyncPanels(object):
+
+    def __init__(self, panel1, panel2):
+        self.panel1 = panel1
+        self.panel2 = panel2
+        self.panel1.grid.Bind(wx.EVT_SCROLLWIN, self.onScrollWin1)
+        self.panel2.grid.Bind(wx.EVT_SCROLLWIN, self.onScrollWin2)
+ 
+    def onScrollWin1(self, event):
+        if event.Orientation == wx.SB_HORIZONTAL:
+            self.panel2.grid.Scroll(event.Position, -1)
+        else:
+            self.panel2.grid.Scroll(-1, event.Position)
+        event.Skip()
+ 
+    def onScrollWin2(self, event):
+        if event.Orientation == wx.SB_HORIZONTAL:
+            self.panel1.grid.Scroll(event.Position, -1)
+        else:
+            self.panel1.grid.Scroll(-1, event.Position)
+        event.Skip()
+
+########################################################################
+
+class EnemyGridPanel( wx.Panel ):
+
+    def __init__( self, parent, margin ):
+    
+        """Constructor"""
+        wx.Panel.__init__( self, parent )    
+        
+        fieldSize = 10
+        global map
+        
+        self.margin = margin
+        self.grid = gridlib.Grid( self, style = wx.BORDER_SUNKEN )
+        self.grid.CreateGrid( fieldSize, fieldSize )
+        #self.grid.Bind( gridlib.EVT_GRID_SELECT_CELL, self.onSingleSelect )
+        
+        for row in range( 0, fieldSize ):
+            for col in range( 0, fieldSize ):
+            
+                self.grid.SetRowSize( row, 30 )
+                self.grid.SetColSize( col, 30 )
+                
+                
+        for x in range(w):
+                for y in range(h):
+                    
+                    if map [ x ][ y ] is "p":
+                        self.grid.SetCellBackgroundColour( x, y, wx.RED )
+                        self.grid.ForceRefresh()
+                        
+ 
+        sizer = wx.BoxSizer( wx.VERTICAL )
+        sizer.Add( self.grid, 1, wx.EXPAND )
+        self.SetSizer( sizer )
+
+########################################################################
+
 class GridPanel( wx.Panel ):
  
     def __init__( self, parent, margin ):
@@ -47,6 +108,7 @@ class GridPanel( wx.Panel ):
         self.grid = gridlib.Grid( self, style = wx.BORDER_SUNKEN )
         self.grid.CreateGrid( fieldSize, fieldSize )
         self.grid.Bind( gridlib.EVT_GRID_SELECT_CELL, self.onSingleSelect )
+        #self.grid.Bind( gridlib.EVT_GRID_SELECT_CELL, self.refreshGrid )
         
         for row in range( 0, fieldSize ):
             for col in range( 0, fieldSize ):
@@ -76,7 +138,16 @@ class GridPanel( wx.Panel ):
         global map
         global counter 
         counter += 1
-
+        
+        #if self.margin == "enemy_field":
+        
+        if counter%2 == 0:
+            self.grid.SetCellBackgroundColour( 3, 3, wx.GREEN )
+        else:
+            self.grid.SetCellBackgroundColour( 3, 3, wx.RED )
+            
+        self.grid.ForceRefresh() 
+            
         #if shipOrient == "vertical":
         
             #self.grid.SetCellBackgroundColour( 1, 1, wx.BLUE )
@@ -148,21 +219,38 @@ class GridPanel( wx.Panel ):
     def paintCell( self, x, y ):
         
         self.grid.SetCellBackgroundColour( x, y, wx.GREEN )
+        self.grid.ForceRefresh()
+        
+    def refreshGrid( self ):
+        
+        if self.margin == "enemy_field":
+        
+            if counter%2 == 0:
+                self.grid.SetCellBackgroundColour( 3, 3, wx.GREEN )
+            else:
+                self.grid.SetCellBackgroundColour( 3, 3, wx.RED )
+             
+        self.grid.ForceRefresh()
  
 ########################################################################
 
 class RegularPanel( wx.Panel ):
 
-    def __init__( self, parent ):
+    def __init__( self, parent, panel1, panel2 ):
 	
         """Constructor"""
         wx.Panel.__init__( self, parent )
 		
         self.SetBackgroundColour( "cyan" )
         
+        self.panel1 = panel1
+        self.panel2 = panel2
+        
         self.m_buttonFinishEditing = wx.Button( self, wx.ID_ANY, u"Finish placing", wx.DefaultPosition, wx.DefaultSize, 0 )
         self.m_buttonBattleStart = wx.Button( self, wx.ID_ANY, u"BATTLE!", wx.DefaultPosition, wx.DefaultSize, 0 ) 
         self.m_buttonFire = wx.Button( self, wx.ID_ANY, u"Feuer frei!!!", wx.DefaultPosition, wx.DefaultSize, 0 ) 
+        
+        self.m_buttonFire.Bind( wx.EVT_BUTTON, self.refreshPanel )
         
         sizer1 = wx.BoxSizer( wx.VERTICAL )
         sizer1.AddSpacer( 55 )
@@ -240,6 +328,12 @@ class RegularPanel( wx.Panel ):
             shipOrient = "horizontal"
             print( shipOrient )
             print( self.radioBoxShipOrient.GetStringSelection(),' is clicked from Radio Box' )
+            
+    def refreshPanel( self, event ):
+        
+        #self.panel1.ForceRefresh()
+        self.panel2.refreshGrid()
+        print( 'fired...' )
         
     
 ########################################################################    
@@ -260,14 +354,24 @@ class MainPanel(wx.Panel):
         notebook.AddPage(page, "Splitter")
         hSplitter = wx.SplitterWindow(page)
  
-        self.panelOne = GridPanel(hSplitter, "my_field")       
+        self.panelOne = GridPanel(hSplitter, "my_field")     
+        #self.panelTwo = EnemyGridPanel(hSplitter, "enemy_field")            
         self.panelTwo = GridPanel(hSplitter, "enemy_field")
-        #ScrollSync(self.panelOne, self.panelTwo)
+        
+        global counter
+        
+        if counter % 2 == 0:
+        
+            self.panelTwo.refreshGrid()
+            
+        else:
+        
+            self.panelTwo.refreshGrid()
  
         hSplitter.SplitVertically(self.panelOne, self.panelTwo)
         hSplitter.SetSashGravity(0.5)
  
-        self.panelThree = RegularPanel(page)
+        self.panelThree = RegularPanel(page, self.panelOne, self.panelTwo)
         page.SplitHorizontally(hSplitter, self.panelThree)
         page.SetSashGravity(0.6)
  
